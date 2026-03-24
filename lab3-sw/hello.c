@@ -15,6 +15,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#define RADIUS 30
+#define H_MAX 640
+#define V_MAX 480
+
 int vga_ball_fd;
 
 /* Read and print the background color */
@@ -40,11 +44,25 @@ void set_background_color(const vga_ball_color_t *c)
   }
 }
 
+/* Set the Ball Position */
+void set_position(const vga_ball_pos_t *c)
+{
+	vga_ball_arg_t vla;
+	vla.position = *c;
+	if (ioctl(vga_ball_fd, VGA_BALL_WRITE_POSITION, &vla)) {
+		perror("ioctl(VGA_BALL_SET_POSITION) failed");
+		return;
+	}
+}
+
 int main()
 {
   vga_ball_arg_t vla;
   int i;
   static const char filename[] = "/dev/vga_ball";
+	/* Direction of ball */
+	int dx = 1;
+	int dy = 1;
 
   static const vga_ball_color_t colors[] = {
     { 0xff, 0x00, 0x00 }, /* Red */
@@ -67,6 +85,31 @@ int main()
     return -1;
   }
 
+	vga_ball_pos_t ball_pos;
+	ball_pos.x = 0xc3;
+	ball_pos.y = 0xc3;
+
+	set_position(&ball_pos);
+
+	while (1) {
+		if (ball_pos.x > H_MAX - RADIUS || ball_pos.x < RADIUS) {
+			dx = -dx;
+		}
+		if (ball_pos.y > V_MAX - RADIUS || ball_pos.y < RADIUS) {
+			dy = -dy;
+		}
+
+		set_position(&ball_pos);
+
+		printf("ball_pos: x=%d. y=%d\n", ball_pos.x, ball_pos.y);
+		fflush(stdout);
+
+		ball_pos.x += dx;
+		ball_pos.y += dy;
+
+		usleep(10000);
+	}
+
   printf("initial state: ");
   print_background_color();
 
@@ -75,7 +118,6 @@ int main()
     print_background_color();
     usleep(400000);
   }
-  
   printf("VGA BALL Userspace program terminating\n");
   return 0;
 }

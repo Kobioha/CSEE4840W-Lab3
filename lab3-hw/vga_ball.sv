@@ -1,6 +1,10 @@
 /*
- * VGA Ball Peripheral Register Map
- * 16-bit writedata interface
+ * Avalon memory-mapped peripheral that generates VGA
+ *
+ * Stephen A. Edwards
+ * Columbia University
+ *
+ * Register map (16-bit writedata):
  *
  * Offset  Bits     Meaning
  * 0       [15:0]   Ball X coordinate (0-639)

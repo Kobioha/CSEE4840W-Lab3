@@ -1,5 +1,4 @@
-/*
- * Device driver for the VGA ball peripheral
+/* * Device driver for the VGA video generator
  *
  * A Platform device implemented using the misc subsystem
  *
@@ -36,9 +35,9 @@
 
 #define DRIVER_NAME "vga_ball"
 
-/* Device registers (byte offsets for 16-bit registers) */
+/* Device registers: 16-bit, so offset 1 = byte +2 */
 #define BALL_X(x) (x)
-#define BALL_Y(x) ((x) + 2)
+#define BALL_Y(x) ((x)+2)
 
 /*
  * Information about our device
@@ -49,9 +48,6 @@ struct vga_ball_dev {
 	vga_ball_coord_t coord;
 } dev;
 
-/*
- * Write ball coordinates to hardware
- */
 static void write_coord(vga_ball_coord_t *coord)
 {
 	iowrite16(coord->x, BALL_X(dev.virtbase));
@@ -61,7 +57,8 @@ static void write_coord(vga_ball_coord_t *coord)
 
 /*
  * Handle ioctl() calls from userspace:
- * Set ball coordinates on the VGA display.
+ * Read or write the segments on single digits.
+ * Note extensive error checking of arguments
  */
 static long vga_ball_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
@@ -128,8 +125,8 @@ static int __init vga_ball_probe(struct platform_device *pdev)
 		goto out_release_mem_region;
 	}
 
-	/* Set initial ball position to center of screen */
-	write_coord(&center);
+	/* Set an initial ball position */
+        write_coord(&center);
 
 	return 0;
 
@@ -175,7 +172,7 @@ static int __init vga_ball_init(void)
 	return platform_driver_probe(&vga_ball_driver, vga_ball_probe);
 }
 
-/* Called when the module is unloaded: release resources */
+/* Calball when the module is unloaded: release resources */
 static void __exit vga_ball_exit(void)
 {
 	platform_driver_unregister(&vga_ball_driver);

@@ -1,4 +1,5 @@
-/* * Device driver for the VGA video generator
+/*
+ * Device driver for the VGA ball peripheral
  *
  * A Platform device implemented using the misc subsystem
  *
@@ -35,13 +36,9 @@
 
 #define DRIVER_NAME "vga_ball"
 
-/* Device registers */
-#define BG_RED(x) (x)
-#define BG_GREEN(x) ((x)+1)
-#define BG_BLUE(x) ((x)+2)
-
-#define BALL_X(x) ((x))
-#define BALL_Y(x) ((x)+2)
+/* Device registers (byte offsets for 16-bit registers) */
+#define BALL_X(x) (x)
+#define BALL_Y(x) ((x) + 2)
 
 /*
  * Information about our device
@@ -49,66 +46,38 @@
 struct vga_ball_dev {
 	struct resource res; /* Resource: our registers */
 	void __iomem *virtbase; /* Where registers can be accessed in memory */
-        vga_ball_color_t background;
-	vga_ball_pos_t position;
+	vga_ball_coord_t coord;
 } dev;
 
 /*
- * Write segments of a single digit
- * Assumes digit is in range and the device information has been set up
+ * Write ball coordinates to hardware
  */
-static void write_background(vga_ball_color_t *background)
+static void write_coord(vga_ball_coord_t *coord)
 {
-	iowrite8(background->red, BG_RED(dev.virtbase) );
-	iowrite8(background->green, BG_GREEN(dev.virtbase) );
-	iowrite8(background->blue, BG_BLUE(dev.virtbase) );
-	dev.background = *background;
+	iowrite16(coord->x, BALL_X(dev.virtbase));
+	iowrite16(coord->y, BALL_Y(dev.virtbase));
+	dev.coord = *coord;
 }
-
-static void write_position(vga_ball_pos_t *position)
-{
-	iowrite8(position->x, BALL_X(dev.virtbase) );
-	iowrite8(position->y, BALL_Y(dev.virtbase) );
-	dev.position = *position;
 
 /*
  * Handle ioctl() calls from userspace:
- * Read or write the segments on single digits.
- * Note extensive error checking of arguments
+ * Set ball coordinates on the VGA display.
  */
 static long vga_ball_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
-	vga_ball_arg_t vla;
+	vga_ball_coord_t coord;
 
 	switch (cmd) {
-	case VGA_BALL_WRITE_BACKGROUND:
-		if (copy_from_user(&vla, (vga_ball_arg_t *) arg,
-				   sizeof(vga_ball_arg_t)))
+	case VGA_BALL_SET_COORD:
+		if (copy_from_user(&coord, (vga_ball_coord_t __user *)arg,
+				   sizeof(vga_ball_coord_t)))
 			return -EACCES;
-		write_background(&vla.background);
-		break;
-
-	case VGA_BALL_READ_BACKGROUND:
-	  	vla.background = dev.background;
-		if (copy_to_user((vga_ball_arg_t *) arg, &vla,
-				 sizeof(vga_ball_arg_t)))
-			return -EACCES;
+		write_coord(&coord);
 		break;
 
 	default:
 		return -EINVAL;
 	}
-
-	case VGA_BALL_WRITE_POSITION:
-		if (copy_from_user(&vla, (vga_ball_arg_t *) arg,
-					sizeof(vga_ball_arg_t)))
-			return -EACCES;
-		write_position(&vla.position);
-		break;
-
-	default:
-		return -EINVAL;
-}
 
 	return 0;
 }
@@ -132,7 +101,7 @@ static struct miscdevice vga_ball_misc_device = {
  */
 static int __init vga_ball_probe(struct platform_device *pdev)
 {
-        vga_ball_color_t beige = { 0xf9, 0xe4, 0xb7 };
+	vga_ball_coord_t center = { 320, 240 };
 	int ret;
 
 	/* Register ourselves as a misc device: creates /dev/vga_ball */
@@ -158,9 +127,9 @@ static int __init vga_ball_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto out_release_mem_region;
 	}
-        
-	/* Set an initial color */
-        write_background(&beige);
+
+	/* Set initial ball position to center of screen */
+	write_coord(&center);
 
 	return 0;
 
@@ -206,7 +175,7 @@ static int __init vga_ball_init(void)
 	return platform_driver_probe(&vga_ball_driver, vga_ball_probe);
 }
 
-/* Calball when the module is unloaded: release resources */
+/* Called when the module is unloaded: release resources */
 static void __exit vga_ball_exit(void)
 {
 	platform_driver_unregister(&vga_ball_driver);

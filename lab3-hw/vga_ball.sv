@@ -40,9 +40,13 @@ module vga_ball(input logic        clk,
 
    vga_counters counters(.clk50(clk), .*);
 
-   // Latch coordinates on vsync to prevent tearing
+   // Latch coordinates on vsync to prevent tearing and initialize
+   // the displayed position deterministically after reset.
    always_ff @(posedge clk) begin
-      if (!VGA_VS) begin
+      if (reset) begin
+         ball_x_buf <= 16'd320;
+         ball_y_buf <= 16'd240;
+      end else if (!VGA_VS) begin
          ball_x_buf <= ball_x_reg;
          ball_y_buf <= ball_y_reg;
       end

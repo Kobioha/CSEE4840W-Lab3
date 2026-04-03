@@ -47,15 +47,21 @@ int main()
   set_ball_position(x, y);
 
   while (1) {
-	  x += dx;
-	  y += dy;
+		  int next_x = x + dx;
+		  int next_y = y + dy;
 
-	  if (x - RADIUS <= 0 || x + RADIUS >= SCREEN_W)
-		  dx = -dx;
-	  if (y - RADIUS <= 0 || y + RADIUS >= SCREEN_H)
-		  dy = -dy;
+		  if (next_x - RADIUS < 0 || next_x + RADIUS >= SCREEN_W) {
+			  dx = -dx;
+			  next_x = x + dx;
+		  }
+		  if (next_y - RADIUS < 0 || next_y + RADIUS >= SCREEN_H) {
+			  dy = -dy;
+			  next_y = y + dy;
+		  }
 
-	  set_ball_position(x, y);
+		  x = next_x;
+		  y = next_y;
+		  set_ball_position(x, y);
 
 	  printf("ball_pos: x=%d, y=%d\n", x, y);
 	  fflush(stdout);

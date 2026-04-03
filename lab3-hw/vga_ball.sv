@@ -13,7 +13,7 @@
  * Software byte addresses: X at base+0, Y at base+2
  * Coordinates are double-buffered on vsync to prevent tearing.
  *
- * Fmax (Slow 1100mV 85C): ___ MHz (must be >= 50 MHz)
+ * Fmax (Slow 1100mV 85C): 132.38 MHz (must be >= 50 MHz)
  */
 
 module vga_ball(input logic        clk,
@@ -35,20 +35,25 @@ module vga_ball(input logic        clk,
 
    logic [15:0]    ball_x_reg, ball_y_reg;  // CPU writes these
    logic [15:0]    ball_x_buf, ball_y_buf;  // rendering uses these
+   logic           vga_vs_d;
 
    logic [7:0]     background_r, background_g, background_b;
 
    vga_counters counters(.clk50(clk), .*);
 
-   // Latch coordinates on vsync to prevent tearing and initialize
-   // the displayed position deterministically after reset.
+   // Latch coordinates once per frame on the falling edge of VSYNC
+   // to prevent tearing and initialize the displayed position after reset.
    always_ff @(posedge clk) begin
       if (reset) begin
+         vga_vs_d <= 1'b1;
          ball_x_buf <= 16'd320;
          ball_y_buf <= 16'd240;
-      end else if (!VGA_VS) begin
-         ball_x_buf <= ball_x_reg;
-         ball_y_buf <= ball_y_reg;
+      end else begin
+         vga_vs_d <= VGA_VS;
+         if (vga_vs_d && !VGA_VS) begin
+            ball_x_buf <= ball_x_reg;
+            ball_y_buf <= ball_y_reg;
+         end
       end
    end
 

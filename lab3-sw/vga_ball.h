@@ -1,6 +1,13 @@
 #ifndef _VGA_BALL_H
 #define _VGA_BALL_H
 
+#ifdef __KERNEL__
+#include <linux/types.h>
+#else
+#include <stdint.h>
+typedef uint16_t __u16;
+#endif
+
 #include <linux/ioctl.h>
 
 typedef struct {
